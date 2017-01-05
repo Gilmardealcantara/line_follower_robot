@@ -1,2 +1,2 @@
 # Seguidor de Linha 
-## Projeto de controlador
+## Projeto de controlador para a plataforma Arduíno.
