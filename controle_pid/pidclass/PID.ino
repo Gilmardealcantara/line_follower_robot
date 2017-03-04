@@ -20,18 +20,19 @@ public:
 		kI = _kI;
 		kD = _kD;
 	}
-	
+
+    //	amostra de valor medido pelo sensor, saida do malha 
 	void addNewSample(double _sample){
 		sample = _sample;
 	}
-	
+    // para calcular o erri, linha 35
 	void setSetPoint(double _setPoint){
 		setPoint = _setPoint;
 	}
 	
 	double process(){
 		// Implementação P ID
-		error = setPoint - sample;
+		error = setPoint - sample; // no segue linha o erro e calculado sem setPoint mas com o centroid do censor
 		float deltaTime = (millis() - lastProcess) / 1000.0;
 		lastProcess = millis();
 		
