@@ -1,3 +1,9 @@
+/*
+sketch/Import Library
+-- Add the folder AFMOTOR 
+---git/dependecies/
+*/
+
 #include <AFMotor.h> // https://learn.adafruit.com/adafruit-motor-shield/library-install
 
 AF_DCMotor motorEsq(1, MOTOR12_64KHZ);
@@ -12,9 +18,9 @@ void setup() {
 }
 
 void loop() {
- motorDir.setSpeed(255);
- motorEsq.setSpeed(255); 
+ motorDir.setSpeed(50);
+ motorEsq.setSpeed(50); 
  motorDir.run(FORWARD);
  motorEsq.run(FORWARD);
-
+  
 }
