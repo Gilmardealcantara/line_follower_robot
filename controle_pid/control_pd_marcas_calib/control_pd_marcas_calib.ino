@@ -1,7 +1,8 @@
 #include <AFMotor.h> // https://learn.adafruit.com/adafruit-motor-shield/library-install
-
+//Maina
 bool debugSen = false;
 bool debugMotor = false;
+bool debugMark = false;
 
 //INF
 #define INF 0xffffffff
@@ -19,9 +20,9 @@ AF_DCMotor motorDir(2, MOTOR12_64KHZ);
 
 //--------------------------------Dimensões do robô
 //dimensões do robô
-#define COMP 0.125
-#define EIXO 0.101
-#define RAIO 0.031
+#define COMP 0.1316
+#define EIXO 0.1379
+#define RAIO 0.0313
 
 //--------------------------------Distâncias dos sensores
 //Peso dos sensores
@@ -87,7 +88,7 @@ void readSens(){
 //#define MARKC 10
 //#define THRESMARK 6
 double MARKC;
-double THRESHMARK;
+double THRESHMARK = 200;
 
 void calibrate(){
   int i,j;
@@ -144,30 +145,26 @@ unsigned long tmark;
 int state;
 
 void detectaMarcas(){
-  if((tmark == INF) && (sensRead[0] < MARKC) && (sensRead[1] < MARKC) && (sensRead[6] < MARKC) && (sensRead[7] < MARKC) ){
+  if((tmark == INF)){
+    if(debugMark){
+      Serial.print(state); Serial.print(" ");
+      Serial.print(sensMark); Serial.print(" ");
+      Serial.println(THRESHMARK);
+    }
     switch(state) {
-      case 0 :
-        if (sensMark >= THRESHMARK) {
-          state++;
-          tmark = millis();
-        }
-        break;
-      case 1 :
-        if (sensMark >= THRESHMARK) {
-          state++;
-          tmark = millis();
-        }
-        break;
-      case 2 :
-        tmark = millis();
-        state++;
-        break;
-      case 3 :
+      case 10 :
+        delay(500);
         motorEsq.setSpeed(0);
         motorDir.setSpeed(0);
         motorEsq.run(RELEASE);
         motorDir.run(RELEASE);
         delay(200000);
+        break;
+      default:
+        if (sensMark >= THRESHMARK) {
+          state++;
+          tmark = millis();
+        }
     }
   } else if(tmark != INF){
     if ((millis() - tmark) >= TBMARKS) {
@@ -178,20 +175,20 @@ void detectaMarcas(){
 
 //--------------------------------Control
 //pwm 
-#define PWMMIN 100
-#define PWMMAX 255
+#define PWMMIN 50
+#define PWMMAX 80
 
 //velocidade angular máxima
 //#define Wmax 21.2622
 #define Wmax 6.0
 
 //Controlador proporcional
-//#define Kp 250
-//#define Kd 10
+//#define Kp 150.0
+//#define Kd 0.0
 //#define Ki 0.0
 #define Kp 250.0// var angular de 0 - 2123
 #define Kd 10.0
-#define Ki 0.0
+#define Ki 2.0
 
 //tempo de amostragem
 #define T 5
@@ -204,7 +201,7 @@ double deltaWRoda;
 double eixoRaio = EIXO / RAIO;
 
 //tempo
-unsigned long lt;
+unsigned long lt, var;
 
 double err_ante = 0, P = 0.0, I = 0.0, D = 0.0;
 double a = ((PWMMAX - PWMMIN)/Wmax);
@@ -235,18 +232,25 @@ void setup() {
   //delay(5000);
   state=0;
   tmark=INF;
-  lt = millis();
+  lt = var = millis();
+  
+ 
 }
-/*
+
+
 void loop() {
-  if ((millis() - lt) > T) {
+  if ((millis() - lt) >  T ) {
     lt = millis();
 
+    //if (millis() - var > 1000 * 10){
+     // motorDir.setSpeed(0);
+     //motorEsq.setSpeed(0);
+    //}else{
     centroid();
-    detectaMarcas();
+    //detectaMarcas();
     control();
     
-    motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), 0, 255));
+    motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
     
     if (M.pwmL < 0) {
       //motorEsq.setSpeed(PWMMIN - M.pwmL);
@@ -256,11 +260,7 @@ void loop() {
       motorEsq.run(FORWARD);
     }
 
-    
-    M.pwmL = (Wl*255)/Wmax;
-    M.pwmR = (Wr*255)/Wmax;;
-    
-    motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), 0, 255));
+    motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
     
     if (M.pwmR < 0) {
       //motorDir.setSpeed(PWMMIN - M.pwmR);
@@ -281,66 +281,14 @@ void loop() {
       Serial.print("\t ML_pwm: "); Serial.print(M.pwmL);
       Serial.print(" MR_pwm: "); Serial.print(M.pwmR);
 
-      Serial.print("\t PWM_L_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmL), 0, 255));
-      Serial.print(" PWM_R_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmR), 0, 255));
+      Serial.print("\t PWM_L_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
+      Serial.print(" PWM_R_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
     }
     
     if(debugSen || debugMotor){
       Serial.println(" ");
     }
-    
-  }
+
+    }
+  
 }
-*/
-
-
-void loop() {
-  if ((millis() - lt) > T) {
-    lt = millis();
-
-    centroid();
-    detectaMarcas();
-    control();
-    
-    motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), 0, 255));
-    
-    if (M.pwmL < 0) {
-      //motorEsq.setSpeed(PWMMIN - M.pwmL);
-      motorEsq.run(BACKWARD);
-    } else {
-      //motorEsq.setSpeed(PWMMIN + M.pwmL);
-      motorEsq.run(FORWARD);
-    }
-
-    motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), 0, 255));
-    
-    if (M.pwmR < 0) {
-      //motorDir.setSpeed(PWMMIN - M.pwmR);
-      motorDir.run(BACKWARD);
-    } else {
-      //motorDir.setSpeed(PWMMIN + M.pwmR);
-      motorDir.run(FORWARD);
-    }
-    err_ante = err;
-     
-    if(debugSen || debugMotor){
-     Serial.print("\terr: "); Serial.print(err, 4);
-    }
-    if(debugMotor){
-      Serial.print("\t Wl: "); Serial.print(Wl);
-      Serial.print(" Wr: "); Serial.print(Wr);
-
-      Serial.print("\t ML_pwm: "); Serial.print(M.pwmL);
-      Serial.print(" MR_pwm: "); Serial.print(M.pwmR);
-
-      Serial.print("\t PWM_L_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmL), 0, 255));
-      Serial.print(" PWM_R_real: "); Serial.print(constrain(PWMMIN + abs(M.pwmR), 0, 255));
-    }
-    
-    if(debugSen || debugMotor){
-      Serial.println(" ");
-    }
-    
-  }
-}
-
