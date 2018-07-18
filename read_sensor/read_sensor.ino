@@ -31,7 +31,7 @@ unsigned long lt;
 unsigned int sensRead[8];
 unsigned int sensMark,sensCurve;
 
-bool debug = false;
+bool debug = true;
 
 void readSens(){
   sensRead[0]=READMAX-analogRead(S1PIN);
