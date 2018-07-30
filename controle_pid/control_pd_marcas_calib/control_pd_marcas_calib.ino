@@ -68,8 +68,10 @@ unsigned int sensRead[8];
 unsigned int sensMarkDir,sensCurve;
 
 //-------------Novas funçoes para o CORA ---------------------
-//Scurve
-void curvafechada(){
+
+void curvafechadaDir(){
+}
+void curvafechadaDir(){
 }
 void seguindolinha(){
         motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
@@ -90,57 +92,96 @@ void seguindolinha(){
           motorDir.run(FORWARD);
         }
 }
-#define TBMARKS 300
-#define TBMARKSBIT 100
-//controle de tempo entre marcas
-unsigned long tmark;
+#define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
+#define TBMARKSBIT 100 //Tempo para proxima verificaçao de marca
+#define TDirEsq 10 //Tempo maximo entre a leitura do lado esquerdo e direito
 //Conta as marcas diretas
 int contDir;
 //Conta as marcas esquerdas
 int contEsq;
+unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
 
-int state;
 
-void MEstadosMotor(){
+void contamarcasDir(){
+  unsigned long tmark;
   int novamarca;
-  //Conta as marcas laterais 
+  //Rotina padrao enquanto nao indentificou nenhum marca branca
   if((tmark == INF)){
     if(debugMark){
-      Serial.print(state); Serial.print(" ");
+      Serial.print("Dir: "); 
       Serial.print(sensMarkDir); Serial.print(" ");
-      Serial.println(THRESHMARK);
     }
     if (sensMarkDir >= THRESHMARK) {
           tmark = millis();
-          
     }
   }else if(tmark != INF){
-
     //Diferencia se  uma marca de curva ou linha simples
     if ((millis() - tmark) >= TBMARKSBIT && (millis() - tmark) <= TBMARKS) { 
       if (sensMarkDir >= THRESHMARK && novamarca == false) { //Ainda esta lendo branco, adiciona 1 na contagem de marcas
           contDir++;
           novamarca=true;
-      }
-      
-            
-     
+      }            
     }else if ( (millis() - tmark) >= TBMARKS){ 
+      if(novamarca == false){//Quer dizer que nao encontrou uma nova marca, entao  e' uma linha
+        trocarestado=true; //ativa troca de estado na maquina de estado
+        tmarkDir=millis();
+      }
+      novamarca=false;
       tmark=INF;
     }
+  }  
+}  
+void contamarcasEsd(){
+  unsigned long tmark;
+  int novamarca;
+  //Rotina padrao enquanto nao indentificou nenhum marca branca
+  if((tmark == INF)){
+    if(debugMark){
+      Serial.print("Esq: "); 
+      Serial.print(sensMarkEsq); 
+      Serial.println("THERESHMARK:");Serial.print(HRESHMARK);
+    }
+    if (sensMarkEsq >= THRESHMARK) {
+          tmark = millis();
+    }
+  }else if(tmark != INF){
+    //Diferencia se  uma marca de curva ou linha simples
+    if ((millis() - tmark) >= TBMARKSBIT && (millis() - tmark) <= TBMARKS) { 
+      if (sensMarkEsq >= THRESHMARK && novamarca == false) { //Ainda esta lendo branco, adiciona 1 na contagem de marcas
+          contDir++;
+          novamarca=true;
+      }            
+    }else if ( (millis() - tmark) >= TBMARKS){ 
+      if(novamarca == false){//Quer dizer que nao encontrou uma nova marca, entao  e' uma linha
+        trocarestado=true; //ativa troca de estado na maquina de estado
+        tmarkDir=millis(); 
+      }
+      novamarca=false;
+      tmark=INF;
+    }
+  }  
+}
+int state;
+
+void tomadordedecisao(){
+  unsigned long wait; //Conta o tempo a partir que um maraca foi contada
+  contamarcasDir();
+  contamarcasEsd();
+  if(tmarkDir!=INF || tmarkEsq != INF){
+    wait=millis();
+    if(millis-wait<=TDirEsq){
+       if(tmarkDir!=INF && tmarkEsq != INF){//Se as duas marcas foram lidas 
+         //Vira para o lado pre definido
+       }
+    }
+    else{ //Se marca for so de um lado 
+      if(contDir==1) curvafechadaDir();
+      else if(contEsq==1) curvafechadaEsq();
+      else if(contDir>1)rotatoria(contaDir);
+      tmarkDir=tmarkEsq=INF;
+    }    
   }
-  //Saber se encerrou a contagem
   
-  
-  switch(state) {
-       switch(state){ 
-       case 1:
-        seguindolinha();
-        break; 
-       case 2:
-        curvafechada();
-        break;
-      } 
 }
 
 void readSens(){
@@ -310,8 +351,8 @@ void setup() {
   STATESM=0; 
   tmark=INF;
   lt = var = millis();
-  contDir=0;
-  contEsq=0;
+  contDir=contEsq=0;
+  tmarkDir=tmarkEsq=INF;
 }
 
 
@@ -319,10 +360,7 @@ void loop() {
   if ((millis() - lt) >  T ) {
     lt = millis();
 
-    //if (millis() - var > 1000 * 10){
-     // motorDir.setSpeed(0);
-     //motorEsq.setSpeed(0);
-    //}else{
+
     centroid();
     //detectaMarcas();
     control();
