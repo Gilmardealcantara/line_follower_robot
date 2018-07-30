@@ -56,16 +56,92 @@ AF_DCMotor motorDir(2, MOTOR12_64KHZ);
 #define S8PIN A15
 
 //Pino para marcas
-#define SMARK A7
+//#define SMARKDIR A7
 
 //pino para curvas
-#define SCURVE A0
+//#define SMARCKESQ A0
 
 //--------------------------------Leitura dos sensores
 //valor máximo de leitura do sensor /10
 #define READMAX 1024
 unsigned int sensRead[8];
-unsigned int sensMark,sensCurve;
+unsigned int sensMarkDir,sensCurve;
+
+//-------------Novas funçoes para o CORA ---------------------
+//Scurve
+void curvafechada(){
+}
+void seguindolinha(){
+        motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
+        if (M.pwmL < 0) {
+          //motorEsq.setSpeed(PWMMIN - M.pwmL);
+          motorEsq.run(BACKWARD);
+        } else {
+          //motorEsq.setSpeed(PWMMIN + M.pwmL);
+          motorEsq.run(FORWARD);
+        }
+        motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
+        
+        if (M.pwmR < 0) {
+          //motorDir.setSpeed(PWMMIN - M.pwmR);
+          motorDir.run(BACKWARD);
+        } else {
+          //motorDir.setSpeed(PWMMIN + M.pwmR);
+          motorDir.run(FORWARD);
+        }
+}
+#define TBMARKS 300
+#define TBMARKSBIT 100
+//controle de tempo entre marcas
+unsigned long tmark;
+//Conta as marcas diretas
+int contDir;
+//Conta as marcas esquerdas
+int contEsq;
+
+int state;
+
+void MEstadosMotor(){
+  int novamarca;
+  //Conta as marcas laterais 
+  if((tmark == INF)){
+    if(debugMark){
+      Serial.print(state); Serial.print(" ");
+      Serial.print(sensMarkDir); Serial.print(" ");
+      Serial.println(THRESHMARK);
+    }
+    if (sensMarkDir >= THRESHMARK) {
+          tmark = millis();
+          
+    }
+  }else if(tmark != INF){
+
+    //Diferencia se  uma marca de curva ou linha simples
+    if ((millis() - tmark) >= TBMARKSBIT && (millis() - tmark) <= TBMARKS) { 
+      if (sensMarkDir >= THRESHMARK && novamarca == false) { //Ainda esta lendo branco, adiciona 1 na contagem de marcas
+          contDir++;
+          novamarca=true;
+      }
+      
+            
+     
+    }else if ( (millis() - tmark) >= TBMARKS){ 
+      tmark=INF;
+    }
+  }
+  //Saber se encerrou a contagem
+  
+  
+  switch(state) {
+       switch(state){ 
+       case 1:
+        seguindolinha();
+        break; 
+       case 2:
+        curvafechada();
+        break;
+      } 
+}
 
 void readSens(){
   sensRead[0]=READMAX-analogRead(S1PIN);
@@ -76,7 +152,7 @@ void readSens(){
   sensRead[5]=READMAX-analogRead(S6PIN);
   sensRead[6]=READMAX-analogRead(S7PIN);
   sensRead[7]=READMAX-analogRead(S8PIN);
-  sensMark=READMAX-analogRead(SMARK);
+  sensMarkDir=READMAX-analogRead(SMARKDIR);
   sensCurve=READMAX-analogRead(SCURVE);
   
   if(debugSen){
@@ -95,7 +171,7 @@ void readSens(){
 //--------------------------------Rotina de calibração dos sensores
 //valor de corte das marcas
 //#define MARKC 10
-//#define THRESMARK 6
+//#define THRE6
 double MARKC;
 double THRESHMARK = 200;
 
@@ -109,7 +185,7 @@ void calibrate(){
   for(i=0;i<10;i++){
     pista=linha=0.0;
     readSens();
-    MARKC+=((sensMark+sensCurve)/2.0);
+    MARKC+=((sensMarkDir+sensCurve)/2.0);
     for(j=0;j<8;j++){
       if((j==3)||(j==4)){
         linha+=sensRead[j];
@@ -147,17 +223,17 @@ void centroid(){
 
 //--------------------------------Detecção de marcas
 //tempo entre marcas
-#define TBMARKS 300
+//#define TBMARKS 300
 //controle de tempo entre marcas
-unsigned long tmark;
+//unsigned long tmark;
 //estado
-int state;
+
 
 void detectaMarcas(){
   if((tmark == INF)){
     if(debugMark){
       Serial.print(state); Serial.print(" ");
-      Serial.print(sensMark); Serial.print(" ");
+      Serial.print(sensMarkDir); Serial.print(" ");
       Serial.println(THRESHMARK);
     }
     switch(state) {
@@ -170,7 +246,7 @@ void detectaMarcas(){
         delay(200000);
         break;
       default:
-        if (sensMark >= THRESHMARK) {
+        if (sensMarkDir >= THRESHMARK) {
           state++;
           tmark = millis();
         }
@@ -221,19 +297,21 @@ void control() {
 }
 
 
+int STATESM;
+
 void setup() {
-  //calibrate();
+   
   motorEsq.setSpeed(0);
   motorDir.setSpeed(0);
   motorEsq.run(RELEASE);
   motorDir.run(RELEASE);
   Serial.begin(9600);
-  //delay(5000);
   state=0;
+  STATESM=0; 
   tmark=INF;
   lt = var = millis();
-  
- 
+  contDir=0;
+  contEsq=0;
 }
 
 
@@ -248,26 +326,9 @@ void loop() {
     centroid();
     //detectaMarcas();
     control();
-    
-    motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
-    
-    if (M.pwmL < 0) {
-      //motorEsq.setSpeed(PWMMIN - M.pwmL);
-      motorEsq.run(BACKWARD);
-    } else {
-      //motorEsq.setSpeed(PWMMIN + M.pwmL);
-      motorEsq.run(FORWARD);
-    }
+    MEstadoMotor();
 
-    motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
     
-    if (M.pwmR < 0) {
-      //motorDir.setSpeed(PWMMIN - M.pwmR);
-      motorDir.run(BACKWARD);
-    } else {
-      //motorDir.setSpeed(PWMMIN + M.pwmR);
-      motorDir.run(FORWARD);
-    }
     err_ante = err;
      
     if(debugSen || debugMotor){
