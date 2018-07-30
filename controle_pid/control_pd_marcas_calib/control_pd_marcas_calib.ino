@@ -1,4 +1,13 @@
 #include <AFMotor.h> // https://learn.adafruit.com/adafruit-motor-shield/library-install
+
+//pwm 
+#define PWMMIN 50
+#define PWMMAX 210
+#define Kp 300.0// var angular de 0 - 2123
+#define Kd 10.0
+#define Ki 2.0
+
+
 //Maina
 bool debugSen = false;
 bool debugMotor = false;
@@ -174,21 +183,11 @@ void detectaMarcas(){
 }
 
 //--------------------------------Control
-//pwm 
-#define PWMMIN 50
-#define PWMMAX 80
+
 
 //velocidade angular máxima
 //#define Wmax 21.2622
 #define Wmax 6.0
-
-//Controlador proporcional
-//#define Kp 150.0
-//#define Kd 0.0
-//#define Ki 0.0
-#define Kp 250.0// var angular de 0 - 2123
-#define Kd 10.0
-#define Ki 2.0
 
 //tempo de amostragem
 #define T 5
@@ -274,6 +273,7 @@ void loop() {
     if(debugSen || debugMotor){
      Serial.print("\terr: "); Serial.print(err, 4);
     }
+    
     if(debugMotor){
       Serial.print("\t Wl: "); Serial.print(Wl);
       Serial.print(" Wr: "); Serial.print(Wr);
