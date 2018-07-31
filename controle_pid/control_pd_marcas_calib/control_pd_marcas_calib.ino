@@ -68,8 +68,19 @@ unsigned int sensRead[8];
 unsigned int sensMarkDir,sensCurve;
 
 //-------------Novas funçoes para o CORA ---------------------
-
+unsigned long tstart;
+bool emcurva;
 void curvafechadaDir(){
+  
+  if(tstart<millis()-10){
+   motorDir.setSpeed(250);
+   motorEsq.setSpeed(50); 
+   motorDir.run(FORWARD);
+   motorEsq.run(FORWARD);
+  }else{
+   emcurva=false; 
+  }
+  
 }
 void curvafechadaDir(){
 }
@@ -340,6 +351,7 @@ void control() {
 
 int STATESM;
 
+
 void setup() {
    
   motorEsq.setSpeed(0);
@@ -353,10 +365,18 @@ void setup() {
   lt = var = millis();
   contDir=contEsq=0;
   tmarkDir=tmarkEsq=INF;
+  emcurva=true;
 }
 
 
 void loop() {
+  if(emcurva==false){
+   tstart=millis(); 
+   emcurva=true;
+  }else{
+    curvafechadaDir();
+   }
+  
   if ((millis() - lt) >  T ) {
     lt = millis();
 
@@ -364,7 +384,7 @@ void loop() {
     centroid();
     //detectaMarcas();
     control();
-    MEstadoMotor();
+   // MEstadoMotor();
 
     
     err_ante = err;
