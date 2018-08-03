@@ -11,7 +11,7 @@
 //Degug
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
-bool debugMark = false;
+bool debugMark = true;
 
 //INF
 #define INF 0xffffffff
@@ -147,7 +147,6 @@ void seguindolinha(){
         }
 }
 #define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
-#define TBMARKSBIT 100 //Tempo para proxima verificaÃ§ao de marca
 #define TDirEsq 10 //Tempo maximo entre a leitura do lado esquerdo e direito
 //Conta as marcas diretas
 int contDir;
@@ -156,74 +155,34 @@ int contEsq;
 unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
 unsigned long tmark1,tmark2;
 
-void contamarcasDir(){
-
-  int novamarca;
+void novocontamarcaDir(){
+   int novamarca;
   //Rotina padrao enquanto nao indentificou nenhum marca branca
   if((tmark1 == INF)){
     if(debugMark){
       Serial.print("Dir: "); 
       Serial.print(sensMarkDir); Serial.print(" ");
+      
     }
     if (sensMarkDir >= THRESHMARK) {
           tmark1 = millis();
           Serial.print ("Alguma coisa");
     }
   }else if(tmark1 != INF){
-    //Diferencia se  uma marca de curva ou linha simples
-    if ((millis() - tmark1) >= TBMARKSBIT && (millis() - tmark1) <= TBMARKS) { 
-      if (sensMarkDir >= THRESHMARK && novamarca == false) { //Ainda esta lendo branco, adiciona 1 na contagem de marcas
-          contDir++;
-          novamarca=true;
-          Serial.print (" Add marca");
-      }            
-    }else if ( (millis() - tmark1) >= TBMARKS){ 
-      if(novamarca == false){//Quer dizer que nao encontrou uma nova marca, entao  e' uma linha
-        trocaestado=true; //ativa troca de estado na maquina de estado
-        tmarkDir=millis();
-          Serial.print (" Linha");
-      }
-      novamarca=false;
-      tmark1=INF;
-    }
-  }  
-}  
-void contamarcasEsd(){
-  unsigned long tmark;
-  int novamarca;
-  //Rotina padrao enquanto nao indentificou nenhum marca branca
-  if((tmark2 == INF)){
-    if(debugMark){
-      Serial.print("Esq: "); 
-      Serial.print(sensMarkEsq); 
-      Serial.println("THERESHMARK:");Serial.print(THRESHMARK);
-    }
-    if (sensMarkEsq >= THRESHMARK) {
-          tmark2 = millis();
-    }
-  }else if(tmark2 != INF){
-    //Diferencia se  uma marca de curva ou linha simples
-    if ((millis() - tmark2) >= TBMARKSBIT && (millis() - tmark2) <= TBMARKS) { 
-      if (sensMarkEsq >= THRESHMARK && novamarca == false) { //Ainda esta lendo branco, adiciona 1 na contagem de marcas
-          contDir++;
-          novamarca=true;
-      }            
-    }else if ( (millis() - tmark2) >= TBMARKS){ 
-      if(novamarca == false){//Quer dizer que nao encontrou uma nova marca, entao  e' uma linha
-        trocaestado=true; //ativa troca de estado na maquina de estado
-        tmarkDir=millis(); 
-      }
-      novamarca=false;
-      tmark2=INF;
+    if ((millis() - tmark1) >= TBMARKS) {
+      tmark1 = INF;
     }
   }  
 }
+
+
+
+
 int state;
 
 void tomadordedecisao(){
   unsigned long wait; //Conta o tempo a partir que um maraca foi contada
-  contamarcasDir();
-  contamarcasEsd();
+ // contamarcasDir();
   if(tmarkDir!=INF || tmarkEsq != INF){
     wait=millis();
     if((millis()-wait)<=TDirEsq){
@@ -428,7 +387,7 @@ void setup() {
 
 void loop() {
   readSens();
-  contamarcasDir();
+  novocontamarcaDir();
 
   /*
   if ((millis() - lt) >  T ) {
