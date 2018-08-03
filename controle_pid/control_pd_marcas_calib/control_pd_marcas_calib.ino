@@ -220,6 +220,66 @@ void control() {
   M.pwmR = a*Wr;
 }
 
+void rotatoria(int marcas){
+ 
+ switch(marcas){
+    case 2:
+    if(sensRead[7]>TRESHMARK){
+      curvafechadaDir();
+    }
+    if(senseRead[0]>TRESHMARK){
+      curvafechadaEsq();
+    }
+    break;
+    
+    case 3:
+    int countDir = 0;
+    int countEsq = 0;
+    if(sensRead[7]>TRESHMARK){
+      countDir++;
+    }
+    if(senseRead[0]>TRESHMARK){
+      countEsq++;
+    }
+    
+    if(countDir == 2){
+      curvafechadaDir();
+
+    }else if(countEsq == 2){
+      curvafechadaEsq();
+
+    }
+        
+    break;
+    
+    case 4:
+    
+    int countDir = 0;
+    int countEsq = 0;
+    
+    if(sensRead[7]>TRESHMARK){
+      countDir++;
+    }
+    
+    if(senseRead[0]>TRESHMARK){
+      countEsq++;
+    }
+    
+    if(countDir == 3){
+      curvafechadaDir();
+
+    }else if(countEsq == 3){
+      curvafechadaEsq();
+
+    }
+      
+    break;
+    
+ }//switch end
+ 
+}//function end
+
+
 
 void setup() {
   //calibrate();
