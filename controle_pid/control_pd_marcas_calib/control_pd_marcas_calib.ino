@@ -155,18 +155,28 @@ int contEsq;
 unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
 unsigned long tmark1,tmark2;
 
+
 void novocontamarcaDir(){
-   int novamarca;
+  int novamarca;
   //Rotina padrao enquanto nao indentificou nenhum marca branca
   if((tmark1 == INF)){
     if(debugMark){
-      Serial.print("Dir: "); 
+      Serial.print("Dira: "); 
       Serial.print(sensMarkDir); Serial.print(" ");
       
     }
+         
     if (sensMarkDir >= THRESHMARK) {
+          Serial.print("Nova  \n");  
+          if(sensRead[1] < THRESHMARK){
+            Serial.print("Nova marca \n");           
+            countDir++;
+          }else{
+             Serial.print("Nova linha\n");
+             countLine++;
+          } 
           tmark1 = millis();
-          Serial.print ("Alguma coisa");
+          //Serial.print ("Alguma coisa");
     }
   }else if(tmark1 != INF){
     if ((millis() - tmark1) >= TBMARKS) {
@@ -174,6 +184,7 @@ void novocontamarcaDir(){
     }
   }  
 }
+
 
 
 
