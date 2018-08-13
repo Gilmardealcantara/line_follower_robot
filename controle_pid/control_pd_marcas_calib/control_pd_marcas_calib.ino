@@ -201,9 +201,9 @@ unsigned long tmark1,tmark2;
 void novocontamarcaDir(){
   int novamarca;
   //Rotina padrao enquanto nao indentificou nenhum marca branca
-  if((tmark1 == INF)){
+  if((tmarkDir == INF)){
     if(debugMark){
-      Serial.print("Dira: "); 
+      Serial.print("Dir: "); 
       Serial.print(sensMarkDir); Serial.print(" "); 
     }
  
@@ -216,13 +216,15 @@ void novocontamarcaDir(){
              Serial.print("Nova linha\n");
              countLine++;
           } 
-          tmark1 = millis();
+          tmarkDir = millis();
           //Serial.print ("Alguma coisa");
     }
-  }else if(tmark1 != INF){
-    if ((millis() - tmark1) >= TBMARKS) {
-      tmark1 = INF;
-    }
+  }else if(tmarkDir != INF){
+     if(sensMarkDir<=THRESHMARK)//Se o sensor lateral da direita ler preto
+          tmarkDir=INF;
+  //  if ((millis() - tmarkDir) >= TBMARKS) {
+  //    tmarkDir = INF;
+  //  }
   }  
 }
 
@@ -235,19 +237,22 @@ int state;
 void tomadordedecisao(){
   unsigned long wait; //Conta o tempo a partir que um maraca foi contada
  // contamarcasDir();
-  if(tmarkDir!=INF || tmarkEsq != INF){
-    wait=millis();
-    if((millis()-wait)<=TDirEsq){
-        if(tmarkDir!=INF && tmarkEsq != INF){//Se as duas marcas foram lidas 
-         //Vira para o lado pre definido
-       }
+  if(countLine>0){
+    if(tmarkDir!=INF || tmarkEsq != INF){
+      wait=millis();
+      if((millis()-wait)<=TDirEsq){
+          if(tmarkDir!=INF && tmarkEsq != INF){//Se as duas marcas foram lidas 
+           //Vira para o lado pre definido
+            coutDir=coutEsq=coutLine=0;
+         }
+      }
+      else{ //Se marca for so de um lado 
+          if(contDir==1) curvafechadaDir();
+          else if(contEsq==1) curvafechadaEsq();
+    //    else if(contDir>1)rotatoria(contDir);      
+          coutDir=coutEsq=coutLine=0;
+      }    
     }
-    else{ //Se marca for so de um lado 
-        if(contDir==1) curvafechadaDir();
-        else if(contEsq==1) curvafechadaEsq();
-  //    else if(contDir>1)rotatoria(contDir);
-      tmarkDir=tmarkEsq=INF;
-    }    
   }
   
 }
