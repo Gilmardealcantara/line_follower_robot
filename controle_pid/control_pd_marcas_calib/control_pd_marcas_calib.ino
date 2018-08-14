@@ -11,7 +11,7 @@
 //Degug
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
-bool debugMark = true;
+bool debugMark = false;
 
 //INF
 #define INF 0xffffffff
@@ -461,7 +461,9 @@ void loop() {
  //o faixadepedestre();
  // if(EMFAIXA==false)
   //  readSens();
-  readSens();
+  //readSens();
+  centroid();
+  control();
   controleMotor();
   //novocontamarcaDir();
 
@@ -470,7 +472,7 @@ void loop() {
     lt = millis();
 
 
-    centroid();
+    
     //detectaMarcas();
     control();
    // MEstadoMotor();
