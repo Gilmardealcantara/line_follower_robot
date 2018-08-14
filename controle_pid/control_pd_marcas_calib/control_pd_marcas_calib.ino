@@ -74,8 +74,13 @@ long tstart;
 boolean emcurva;
 boolean trocaestado;
 boolean INVERSAO;
-boolean FAXAAVIR;
-
+boolean FAIXAAVIR;
+boolean EMFAIXA;
+//Conta as marcas diretas
+int countDir;
+//Conta as marcas esquerdas
+int countEsq;
+int countLine;
 void sigareto(int periodo){
   if(millis()-tstart<periodo){
      sensRead[0]= 80;
@@ -94,12 +99,12 @@ void sigareto(int periodo){
 
 void detectainvecao(){
     if((sensRead[3]< THRESHMARK || sensRead[4]<THRESHMARK) && 
-    sensRead[0]>THRESHMARK && sensRead[1]>THRESHMARK && sensRead[6]>THRESHMARK && sensRead[7]>THRESHMARK
+    sensRead[0]>THRESHMARK && sensRead[1]>THRESHMARK && sensRead[6]>THRESHMARK && sensRead[7]>THRESHMARK &&
     sensMarkDir>THRESHMARK && sensMarkEsq>THRESHMARK){
       INVERSAO=true;   
     } else{
      if(INVERSAO==true)
-       FAXAAVIR=true; 
+       FAIXAAVIR=true; 
      INVERSAO=false;
     } 
        
@@ -109,7 +114,7 @@ void faixadepedestre(){
     
     if(FAIXAAVIR==true){
       if(sensRead[3]< THRESHMARK && sensRead[4]<THRESHMARK && 
-        sensRead[0]<THRESHMARK && sensRead[1]<THRESHMARK && sensRead[6]<THRESHMARK && sensRead[7]<THRESHMARK
+        sensRead[0]<THRESHMARK && sensRead[1]<THRESHMARK && sensRead[6]<THRESHMARK && sensRead[7]<THRESHMARK &&
         sensMarkDir<THRESHMARK && sensMarkEsq<THRESHMARK){
           if(FAIXAAVIR==true && EMFAIXA==false){
              delay(5100);
@@ -169,7 +174,7 @@ void curvafechadaEsq(){
    //emcurva=false; 
   }
 }
-void seguindolinha(){
+void controleMotor(){
         motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
         if (M.pwmL < 0) {
           //motorEsq.setSpeed(PWMMIN - M.pwmL);
@@ -190,10 +195,7 @@ void seguindolinha(){
 }
 #define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
 #define TDirEsq 10 //Tempo maximo entre a leitura do lado esquerdo e direito
-//Conta as marcas diretas
-int contDir;
-//Conta as marcas esquerdas
-int contEsq;
+
 unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
 unsigned long tmark1,tmark2;
 
@@ -243,14 +245,14 @@ void tomadordedecisao(){
       if((millis()-wait)<=TDirEsq){
           if(tmarkDir!=INF && tmarkEsq != INF){//Se as duas marcas foram lidas 
            //Vira para o lado pre definido
-            coutDir=coutEsq=coutLine=0;
+            countDir=countEsq=countLine=0;
          }
       }
       else{ //Se marca for so de um lado 
-          if(contDir==1) curvafechadaDir();
-          else if(contEsq==1) curvafechadaEsq();
+          if(countDir==1) curvafechadaDir();
+          else if(countEsq==1) curvafechadaEsq();
     //    else if(contDir>1)rotatoria(contDir);      
-          coutDir=coutEsq=coutLine=0;
+          countDir=countEsq=countLine=0;
       }    
     }
   }
@@ -441,10 +443,10 @@ void setup() {
   STATESM=0; 
   tmark1=tmark2=INF;
   lt = var = millis();
-  contDir=contEsq=0;
+  countDir=countEsq=0;
   tmarkDir=tmarkEsq=INF;
   INVERSAO=false;
-  FAXAAVIR=false;
+  FAIXAAVIR=false;
 
 
   //Teste rotação 
@@ -456,11 +458,12 @@ void setup() {
 
 
 void loop() {
-  faixadepedestre();
-  if(EMFAIXA==false)
-    readSens();
- 
-  novocontamarcaDir();
+ //o faixadepedestre();
+ // if(EMFAIXA==false)
+  //  readSens();
+  readSens();
+  controleMotor();
+  //novocontamarcaDir();
 
   /*
   if ((millis() - lt) >  T ) {
