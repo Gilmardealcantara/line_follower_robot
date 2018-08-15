@@ -2,7 +2,7 @@
 
 //pwm 
 #define PWMMIN 50
-#define PWMMAX 210
+#define PWMMAX 70
 #define Kp 300.0// var angular de 0 - 2123
 #define Kd 10.0
 #define Ki 2.0
@@ -67,8 +67,8 @@ AF_DCMotor motorDir(2, MOTOR12_64KHZ);
 unsigned int sensRead[8];
 unsigned int sensMarkDir,sensMarkEsq,sensCurve;
 double MARKC;
-double THRESHMARK = 180;
-
+double THRESHMARK = 450;
+double THRESHSIDE= 200;
 //-------------Novas funÃ§oes para o CORA ---------------------
 long tstart;
 boolean emcurva;
@@ -76,11 +76,15 @@ boolean trocaestado;
 boolean INVERSAO;
 boolean FAIXAAVIR;
 boolean EMFAIXA;
+boolean EMROTATORIA;
 //Conta as marcas diretas
 int countDir;
 //Conta as marcas esquerdas
 int countEsq;
 int countLine;
+unsigned long tmark1,tmark2;
+int NumeroMarcas;
+
 void sigareto(int periodo){
   if(millis()-tstart<periodo){
      sensRead[0]= 80;
@@ -100,7 +104,7 @@ void sigareto(int periodo){
 void detectainvecao(){
     if((sensRead[3]< THRESHMARK || sensRead[4]<THRESHMARK) && 
     sensRead[0]>THRESHMARK && sensRead[1]>THRESHMARK && sensRead[6]>THRESHMARK && sensRead[7]>THRESHMARK &&
-    sensMarkDir>THRESHMARK && sensMarkEsq>THRESHMARK){
+    sensMarkDir>THRESHSIDE && sensMarkEsq>THRESHSIDE){
       INVERSAO=true;   
     } else{
      if(INVERSAO==true)
@@ -115,7 +119,7 @@ void faixadepedestre(){
     if(FAIXAAVIR==true){
       if(sensRead[3]< THRESHMARK && sensRead[4]<THRESHMARK && 
         sensRead[0]<THRESHMARK && sensRead[1]<THRESHMARK && sensRead[6]<THRESHMARK && sensRead[7]<THRESHMARK &&
-        sensMarkDir<THRESHMARK && sensMarkEsq<THRESHMARK){
+        sensMarkDir<THRESHSIDE && sensMarkEsq<THRESHSIDE){
           if(FAIXAAVIR==true && EMFAIXA==false){
              delay(5100);
              tstart=millis();
@@ -131,28 +135,30 @@ void faixadepedestre(){
 
 
 void curvafechadaDir(){
- // Serial.print ("LE ");
-  //Serial.print (sensRead[1]);
-  if (sensRead[0]<THRESHMARK){
+//  Serial.print ("LE ");
+ // Serial.print (sensRead[0]);
+  if ((int)(millis()-200)<(int)tmark1){
 
-      /* Serial.print(" ");
-       Serial.print (tstart);
+     //  Serial.print("\n ");
+       /*Serial.print (tstart);
        Serial.print (" Inicio");
        Serial.print (sensRead[1]);
        Serial.print ("\n");*/
-       motorDir.setSpeed(100);
-       motorEsq.setSpeed(100); 
+       
+       motorDir.setSpeed(60);
+       motorEsq.setSpeed(80); 
        motorDir.run(BACKWARD);
        motorEsq.run(FORWARD);
   }else{
+      // Serial.print("\n Encerrado curva \n");
        emcurva=false;
+       if(countDir>1)
+          EMROTATORIA=true;
+       tmark1=INF;
      /*  Serial.print ("Parei");
        Serial.print (sensRead[1]);
        Serial.print ("\n");*/
-       motorDir.setSpeed(0);
-       motorEsq.setSpeed(0); 
-       motorDir.run(FORWARD);
-       motorEsq.run(FORWARD);
+       
      
    //emcurva=false; 
   }
@@ -174,55 +180,39 @@ void curvafechadaEsq(){
    //emcurva=false; 
   }
 }
-void controleMotor(){
-        motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
-        if (M.pwmL < 0) {
-          //motorEsq.setSpeed(PWMMIN - M.pwmL);
-          motorEsq.run(BACKWARD);
-        } else {
-          //motorEsq.setSpeed(PWMMIN + M.pwmL);
-          motorEsq.run(FORWARD);
-        }
-        motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
-        
-        if (M.pwmR < 0) {
-          //motorDir.setSpeed(PWMMIN - M.pwmR);
-          motorDir.run(BACKWARD);
-        } else {
-          //motorDir.setSpeed(PWMMIN + M.pwmR);
-          motorDir.run(FORWARD);
-        }
-}
+
 #define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
 #define TDirEsq 10 //Tempo maximo entre a leitura do lado esquerdo e direito
 
 unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
-unsigned long tmark1,tmark2;
+
 
 
 void novocontamarcaDir(){
   int novamarca;
   //Rotina padrao enquanto nao indentificou nenhum marca branca
   if((tmarkDir == INF)){
-    if(debugMark){
+ /*   if(debugMark){
       Serial.print("Dir: "); 
-      Serial.print(sensMarkDir); Serial.print(" "); 
-    }
+      Serial.print(sensMarkDir); Serial.print(" \n"); 
+    }*/
  
-    if (sensMarkDir >= THRESHMARK) {
-          Serial.print("Nova  \n");  
+    if (sensMarkDir >= THRESHSIDE) {
+        //  Serial.print("Nova  \n");  
+          tmarkDir = millis();
           if(sensRead[1] < THRESHMARK){
-            Serial.print("Nova marca \n");           
+      //      Serial.print("Nova marca \n");           
             countDir++;
           }else{
-             Serial.print("Nova linha\n");
+     //        Serial.print("Nova linha\n");
              countLine++;
+             tomadordedecisao();
           } 
-          tmarkDir = millis();
+          
           //Serial.print ("Alguma coisa");
     }
   }else if(tmarkDir != INF){
-     if(sensMarkDir<=THRESHMARK)//Se o sensor lateral da direita ler preto
+     if(sensMarkDir<=THRESHSIDE)//Se o sensor lateral da direita ler preto
           tmarkDir=INF;
   //  if ((millis() - tmarkDir) >= TBMARKS) {
   //    tmarkDir = INF;
@@ -236,28 +226,102 @@ void novocontamarcaDir(){
 
 int state;
 
+
+int conDir,conEsq;
+void rotatoria(){
+ //Serial.print("Em rotatoria");
+ switch(NumeroMarcas){
+    case 2:
+    //Serial.print("Caseo 2");
+    if(sensRead[7]>THRESHMARK){
+      curvafechadaDir();
+      EMROTATORIA=false;
+    }
+    if(sensRead[0]>THRESHMARK){
+      curvafechadaEsq();
+      EMROTATORIA=false;
+    }
+    break;
+    case 3:
+   // Serial.print("Caseo 3");
+    if(sensRead[7]>THRESHMARK){
+      conDir++;
+     // Serial.print(" novaMarcaDir\n");
+    }
+    if(sensRead[0]>THRESHMARK){
+      //Serial.print(" novaMarcaEsq\n");
+      conEsq++;
+    }
+    
+    if(countDir == 2){
+      curvafechadaDir();
+      EMROTATORIA=false;
+
+    }else if(countEsq == 2){
+      curvafechadaEsq();
+      EMROTATORIA=false;
+    }
+    break;
+    
+    case 4:    
+    if(sensRead[7]>THRESHMARK){
+      conDir++;
+    }
+    
+    if(sensRead[0]>THRESHMARK){
+      conEsq++;
+    }
+    
+    if(countDir == 3){
+      curvafechadaDir();
+      EMROTATORIA=false;
+
+    }else if(countEsq == 3){
+      curvafechadaEsq();
+      EMROTATORIA=false;
+    }
+      
+    break;
+    
+ }//switch end
+ 
+}//function end
+
 void tomadordedecisao(){
   unsigned long wait; //Conta o tempo a partir que um maraca foi contada
  // contamarcasDir();
-  if(countLine>0){
+  //if(countLine>0){
+   // Serial.print("\nHOW\n");
     if(tmarkDir!=INF || tmarkEsq != INF){
+    //  Serial.print("\naQUI\n");
       wait=millis();
-      if((millis()-wait)<=TDirEsq){
+   /*   if((millis()-wait)<=TDirEsq){
+          Serial.print("pQ AQUI?\n");
           if(tmarkDir!=INF && tmarkEsq != INF){//Se as duas marcas foram lidas 
            //Vira para o lado pre definido
             countDir=countEsq=countLine=0;
          }
-      }
-      else{ //Se marca for so de um lado 
-          if(countDir==1) curvafechadaDir();
-          else if(countEsq==1) curvafechadaEsq();
-    //    else if(contDir>1)rotatoria(contDir);      
+      }else{ //Se marca for so de um lado */
+        //  Serial.print("Tomador de decisao");
+        //  Serial.print(countDir);
+         // Serial.print("\n");
+          tmark1=millis();
+          if(countDir==1) emcurva=true;
+          else if(countDir>1){
+            conDir=conEsq=0;
+            NumeroMarcas=countDir;
+            emcurva=true;
+            
+          }
+    //      else if(countEsq==1) curvafechadaEsq();
+                
           countDir=countEsq=countLine=0;
-      }    
-    }
+   //   }    
+   // }
   }
   
 }
+
 
 void readSens(){
   if(INVERSAO==false){
@@ -447,43 +511,57 @@ void setup() {
   tmarkDir=tmarkEsq=INF;
   INVERSAO=false;
   FAIXAAVIR=false;
-
+  EMROTATORIA=false;
 
   //Teste rotação 
 
    tstart=millis(); 
-   emcurva=true;
  
 }
 
 
 void loop() {
- //o faixadepedestre();
- // if(EMFAIXA==false)
-  //  readSens();
-  //readSens();
-  centroid();
-  control();
-  controleMotor();
-  //novocontamarcaDir();
 
-  /*
-  if ((millis() - lt) >  T ) {
-    lt = millis();
-
-
-    
+    //if (millis() - var > 1000 * 10){
+     // motorDir.setSpeed(0);
+     //motorEsq.setSpeed(0);
+    //}else{
+    novocontamarcaDir();
+    if(EMROTATORIA==true)
+      rotatoria();
+    centroid();
     //detectaMarcas();
     control();
-   // MEstadoMotor();
-
-    
-    err_ante = err;
-     
+    if(emcurva==false){
+      
+      motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
+      
+      if (M.pwmL < 0) {
+        //motorEsq.setSpeed(PWMMIN - M.pwmL);
+        motorEsq.run(BACKWARD);
+      } else {
+        //motorEsq.setSpeed(PWMMIN + M.pwmL);
+        motorEsq.run(FORWARD);
+      }
+  
+      motorDir.setSpeed(constrain(PWMMIN + abs(M.pwmR), PWMMIN, PWMMAX));
+      
+      if (M.pwmR < 0) {
+        //motorDir.setSpeed(PWMMIN - M.pwmR);
+        motorDir.run(BACKWARD);
+      } else {
+        //motorDir.setSpeed(PWMMIN + M.pwmR);
+        motorDir.run(FORWARD);
+      }
+      err_ante = err;
+    }else{
+    ;
+      curvafechadaDir();
+    }
     if(debugSen || debugMotor){
      Serial.print("\terr: "); Serial.print(err, 4);
     }
-    */
+    
     if(debugMotor){
       Serial.print("\t Wl: "); Serial.print(Wl);
       Serial.print(" Wr: "); Serial.print(Wr);
@@ -499,6 +577,6 @@ void loop() {
       Serial.println(" ");
     }
 
-    //}
+
   
 }
