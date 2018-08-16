@@ -2,7 +2,7 @@
 
 //pwm 
 #define PWMMIN 50
-#define PWMMAX 70
+#define PWMMAX 80
 #define Kp 300.0// var angular de 0 - 2123
 #define Kd 10.0
 #define Ki 2.0
@@ -12,9 +12,14 @@
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
 bool debugMark = false;
-
+bool debugcountMark = false;
+bool debugInversao = false;
+bool debugRotatoria = false;
+bool debugfaixadepedestre = false;
 //INF
 #define INF 0xffffffff
+double THRESHSIDE= 250;double THRESHMARK = 450;
+
 
 //motor
 typedef struct MotorsS {
@@ -67,8 +72,7 @@ AF_DCMotor motorDir(2, MOTOR12_64KHZ);
 unsigned int sensRead[8];
 unsigned int sensMarkDir,sensMarkEsq,sensCurve;
 double MARKC;
-double THRESHMARK = 450;
-double THRESHSIDE= 200;
+
 //-------------Novas funÃ§oes para o CORA ---------------------
 long tstart;
 boolean emcurva;
@@ -86,7 +90,13 @@ unsigned long tmark1,tmark2;
 int NumeroMarcas;
 
 void sigareto(int periodo){
-  if(millis()-tstart<periodo){
+ /* Serial.print ("Milis tstart Periodo\n");
+  Serial.print (millis());
+  Serial.print ("  ");
+  Serial.print (tstart);
+  Serial.print ("  ");
+  Serial.print (periodo);*/
+  if((int)(millis()-tstart)<(int)periodo){
      sensRead[0]= 80;
      sensRead[1]= 80;
      sensRead[2]= 400;
@@ -95,6 +105,10 @@ void sigareto(int periodo){
      sensRead[5]= 400;
      sensRead[6]= 80;
      sensRead[7]= 80;
+     motorDir.setSpeed(10);
+     motorEsq.setSpeed(100); 
+     motorDir.run(FORWARD);
+     motorEsq.run(FORWARD);
   }else{
      EMFAIXA=false; 
      FAIXAAVIR=false; 
@@ -105,12 +119,30 @@ void detectainvecao(){
     if((sensRead[3]< THRESHMARK || sensRead[4]<THRESHMARK) && 
     sensRead[0]>THRESHMARK && sensRead[1]>THRESHMARK && sensRead[6]>THRESHMARK && sensRead[7]>THRESHMARK &&
     sensMarkDir>THRESHSIDE && sensMarkEsq>THRESHSIDE){
-      INVERSAO=true;   
-    } else{
-     if(INVERSAO==true)
-       FAIXAAVIR=true; 
-     INVERSAO=false;
-    } 
+      if(INVERSAO==false){
+        INVERSAO=true;
+        if(debugInversao==true)
+          Serial.print ("\nInvesao detectada: BRANCO com linha PRETA \n");
+      }else{ 
+        INVERSAO=false;
+        if(debugInversao==true)
+          Serial.print ("\nInvesao detectada: PRETO com linha BRANCA \n");
+        FAIXAAVIR=true;
+         
+        if(debugInversao==true)
+          Serial.print ("\nFaixa a vir \n");
+          
+      }   
+        
+    }/*else{
+      
+      if(INVERSAO==true){
+      
+        
+     }
+     
+     INVERSAO=false;*/
+     
        
 }
 
@@ -120,7 +152,11 @@ void faixadepedestre(){
       if(sensRead[3]< THRESHMARK && sensRead[4]<THRESHMARK && 
         sensRead[0]<THRESHMARK && sensRead[1]<THRESHMARK && sensRead[6]<THRESHMARK && sensRead[7]<THRESHMARK &&
         sensMarkDir<THRESHSIDE && sensMarkEsq<THRESHSIDE){
+          if(debugfaixadepedestre==true)
+            Serial.print("\nLeu tudo preto\n");
           if(FAIXAAVIR==true && EMFAIXA==false){
+             if(debugfaixadepedestre==true)
+                Serial.print("\nReconheceu ponto de parada\n");
              delay(5100);
              tstart=millis();
              EMFAIXA=true;                
@@ -152,8 +188,11 @@ void curvafechadaDir(){
   }else{
       // Serial.print("\n Encerrado curva \n");
        emcurva=false;
-       if(countDir>1)
+       if(countDir>1){
+          if(debugRotatoria==true)
+            Serial.print ("\nRotina de rotatoria \n");
           EMROTATORIA=true;
+       }
        tmark1=INF;
      /*  Serial.print ("Parei");
        Serial.print (sensRead[1]);
@@ -192,24 +231,26 @@ void novocontamarcaDir(){
   int novamarca;
   //Rotina padrao enquanto nao indentificou nenhum marca branca
   if((tmarkDir == INF)){
- /*   if(debugMark){
-      Serial.print("Dir: "); 
-      Serial.print(sensMarkDir); Serial.print(" \n"); 
-    }*/
- 
     if (sensMarkDir >= THRESHSIDE) {
         //  Serial.print("Nova  \n");  
           tmarkDir = millis();
           if(sensRead[1] < THRESHMARK){
-      //      Serial.print("Nova marca \n");           
             countDir++;
+            if(debugcountMark==true){
+              Serial.print("N Marcas:");
+              Serial.print(countDir);
+              Serial.print("\n");
+            }          
           }else{
-     //        Serial.print("Nova linha\n");
+            if(debugcountMark==true){
+              Serial.print("Nova linha -------------------------------------------------\n");
+             
+            }
              countLine++;
              tomadordedecisao();
           } 
           
-          //Serial.print ("Alguma coisa");
+          
     }
   }else if(tmarkDir != INF){
      if(sensMarkDir<=THRESHSIDE)//Se o sensor lateral da direita ler preto
@@ -229,7 +270,8 @@ int state;
 
 int conDir,conEsq;
 void rotatoria(){
- //Serial.print("Em rotatoria");
+
+
  switch(NumeroMarcas){
     case 2:
     //Serial.print("Caseo 2");
@@ -291,7 +333,6 @@ void tomadordedecisao(){
   unsigned long wait; //Conta o tempo a partir que um maraca foi contada
  // contamarcasDir();
   //if(countLine>0){
-   // Serial.print("\nHOW\n");
     if(tmarkDir!=INF || tmarkEsq != INF){
     //  Serial.print("\naQUI\n");
       wait=millis();
@@ -335,7 +376,7 @@ void readSens(){
     sensRead[7]=READMAX-analogRead(S8PIN);
     sensMarkDir=READMAX-analogRead(SMARKDIR);
     sensMarkEsq=READMAX-analogRead(SMARKESQ);
-  }else{
+   }else{
     sensRead[0]=analogRead(S1PIN);
     sensRead[1]=analogRead(S2PIN);
     sensRead[2]=analogRead(S3PIN);
@@ -512,7 +553,7 @@ void setup() {
   INVERSAO=false;
   FAIXAAVIR=false;
   EMROTATORIA=false;
-
+  EMFAIXA=true;
   //Teste rotação 
 
    tstart=millis(); 
@@ -530,7 +571,9 @@ void loop() {
     if(EMROTATORIA==true)
       rotatoria();
     centroid();
-    //detectaMarcas();
+    detectainvecao();
+    faixadepedestre();
+    detectaMarcas();
     control();
     if(emcurva==false){
       
