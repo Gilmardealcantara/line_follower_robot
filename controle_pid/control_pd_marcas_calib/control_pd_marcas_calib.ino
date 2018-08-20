@@ -12,7 +12,7 @@
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
 bool debugMark = false;
-bool debugcountMark=false;
+bool debugcountMark=true;
 bool debugInversao = false;
 bool debugRotatoria = true;
 bool debugfaixadepedestre = false;
@@ -179,7 +179,7 @@ void faixadepedestre() {
 }
 
 
-  void curvafechadaDir() {
+void curvafechadaDir() {
     //  Serial.print ("LE ");
     // Serial.print (sensRead[0]);
     if ((int)(millis() - 200) < (int)tmark1) {
@@ -194,26 +194,23 @@ void faixadepedestre() {
      
     }
 
-  }
-  void curvafechadaEsq() {
+}
+void curvafechadaEsq() {
     if ((int)(millis() - 200) < (int)tmark1) {
-      motorEsq.setSpeed(100);
-      motorDir.setSpeed(100);
+      motorEsq.setSpeed(60);
+      motorDir.setSpeed(80);
       motorEsq.run(BACKWARD);
       motorDir.run(FORWARD);
     } else {
       emcurva = false;
       tmark1 = INF;
-   
-
      
     }
-  }
-
+}
 #define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
 #define TDirEsq 10 //Tempo maximo entre a leitura do lado esquerdo e direito
 
-  unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
+unsigned long tmarkDir, tmarkEsq;//Tempo da ultima leitura de linha do lado esquerdo e direito, usado pra sincronizar as duas leituras
 
 void contamarcaDir() {
     int novamarca;
@@ -229,15 +226,18 @@ void contamarcaDir() {
             Serial.print(countDir);
             Serial.print("\n");
           }
-        } else {
+          
+        }else{
           if (debugcountMark == true) {
             Serial.print("Nova linha -------------------------------------------------\n");
           }
           countLine++;
-          if(countDir>0 || countEsq >0)emcurva=true;
-          tomadordedecisao();
+          if(countDir > 0 || countEsq > 0){
+          emcurva=true;
+          }
         }
       }
+
     } else if (tmarkDir != INF) {
       if (sensMarkDir <= THRESHSIDE) //Se o sensor lateral da direita ler preto
         tmarkDir = INF;
@@ -256,11 +256,11 @@ void contamarcaDir() {
 
   int conDir, conEsq;
   void rotatoria() {
-
+  Serial.print("Rotatoria\n");
   if(countEsq==0 && countDir>1){ //Rotatoria para o lado direito
     switch (countDir) {
       case 2:
-        //Serial.print("Caseo 2");
+        //Serial.print("Case 2");
         if (sensRead[0] > THRESHMARK) {
           curvafechadaDir();
           EMROTATORIA = false;
@@ -272,7 +272,7 @@ void contamarcaDir() {
           Serial.print(" novaMarcaDir\n");
         }
        
-        if (countDir == 2) {
+        if (conDir == 2) {
           Serial.print(" virando\n");
           curvafechadaDir();
           EMROTATORIA = false;
@@ -284,7 +284,7 @@ void contamarcaDir() {
         if (sensRead[0] > THRESHMARK) {
           conDir++;
         }
-        if (countDir == 3) {
+        if (conDir == 3) {
           curvafechadaDir();
           EMROTATORIA = false;
         } 
@@ -297,7 +297,7 @@ void contamarcaDir() {
           case 2:
             //Serial.print("Caseo 2");
             if (sensRead[7] > THRESHMARK) {
-              curvafechadaDir();
+              curvafechadaEsq();
               EMROTATORIA = false;
             }
             break;
@@ -316,7 +316,7 @@ void contamarcaDir() {
             if (sensRead[7] > THRESHMARK) {
               conEsq++;
             }
-            if (countDir == 3) {
+            if (conEsq == 3) {
               curvafechadaEsq();
               EMROTATORIA = false;
     
@@ -329,13 +329,14 @@ void contamarcaDir() {
 
   void tomadordedecisao() {
     unsigned long wait; //Conta o tempo a partir que um maraca foi contada
-    if(countEsq>1 || countDir>1){
+    if(countEsq>=1 || countDir>=1){
       if(emcurva==true){
-        if(countDir==1&&countEsq==0){
+     
+        if(countDir>1&&countEsq==0){
           curvafechadaDir();
           if(debugcountMark==true)
             Serial.print ("Curva simples a direita\n");
-        }else if (countEsq==1&&countDir==0){
+        }else if (countEsq>1&&countDir==0){
           curvafechadaEsq();
           if(debugcountMark==true)
             Serial.print ("Curva simples a esquerda\n");
@@ -344,6 +345,8 @@ void contamarcaDir() {
         
         }
       }else{
+                Serial.print("curva encerrada\n");
+
         if(countEsq==0 && countDir>1 || countEsq>1 && countDir==0 ){
            conDir=conEsq=0;
            EMROTATORIA=true;    
@@ -352,9 +355,6 @@ void contamarcaDir() {
       }
       
     }
-    
-  
-
   }
 
 
@@ -396,22 +396,7 @@ void contamarcaDir() {
       if (sensRead[3] > THRESHMARK || sensRead[4] > THRESHMARK ) { //Se  os 2 sensores do meio verem algo branco, ira faze o calculo usando a leitura dos 4 sensores centrais
         lastsensRead[2] = sensRead[2];
         lastsensRead[3] = sensRead[3];
-        lastsensRead[4] = sensRead[4];#include <AFMotor.h> // https://learn.adafruit.com/adafruit-motor-shield/library-install
-#include <avr/sleep.h>
-//pwm
-#define PWMMIN 50
-#define PWMMAX 70
-#define Kp 200.0// var angular de 0 - 2123
-#define Kd 5.0
-#define Ki 0.0
-
-
-//Degug
-bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
-bool debugMotor = false;
-bool debugMark = false;
-bool debugcountMark=false;
-bool 
+        lastsensRead[4] = sensRead[4];
         lastsensRead[5] = sensRead[5];
         //  Serial.print ("\nEstou lendo a faixa de pedestre\n");
       }
@@ -607,13 +592,13 @@ bool
   void loop() {
 
    
-    //contamarcaDir();
-    //if (EMROTATORIA == true)
-    //  rotatoria();
-    if (FAIXAAVIR == false)
-      centroid();
-    detectainvecao();
-    faixadepedestre();
+    contamarcaDir();
+    if (EMROTATORIA == true)
+      rotatoria();
+    if (FAIXAAVIR == false&&emcurva==false)
+      centroid(); 
+    //detectainvecao();
+    //faixadepedestre();
     control();
     if (emcurva == false && FAIXAAVIR == false  ) {
       motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
@@ -663,4 +648,3 @@ bool
 
 
   }
-
