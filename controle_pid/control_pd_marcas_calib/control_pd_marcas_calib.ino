@@ -2,19 +2,19 @@
 #include <avr/sleep.h>
 //pwm
 #define PWMMIN 50
-#define PWMMAX 70
+#define PWMMAX 80
 #define Kp 200.0// var angular de 0 - 2123
 #define Kd 5.0
 #define Ki 0.0
 
 
 //Degug
-bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
+bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ;
 bool debugMotor = false;
 bool debugMark = false;
-bool debugcountMark=true;
+bool debugcountMark=false;
 bool debugInversao = false;
-bool debugRotatoria = true;
+bool debugRotatoria = false;
 bool debugfaixadepedestre = false;
 //INF
 #define INF 0xffffffff
@@ -97,8 +97,7 @@ double err, lasterr, lasterr_ante, err_ante = 0;
 void detectainvecao() {
   if (FAIXAAVIR == false && EMFAIXA == false)
     if ((sensRead[3] < THRESHMARK || sensRead[4] < THRESHMARK) &&
-        sensRead[0] > THRESHMARK && sensRead[1] > THRESHMARK && sensRead[6] > THRESHMARK && sensRead[7] > THRESHMARK &&
-        sensMarkDir > THRESHSIDE && sensMarkEsq > THRESHSIDE) {
+        sensRead[0] > THRESHMARK && sensRead[1] > THRESHMARK && sensRead[6] > THRESHMARK && sensRead[7] > THRESHMARK ) {
       if (INVERSAO == false) {
         INVERSAO = true;
         if (debugInversao == true)
@@ -121,12 +120,8 @@ void detectainvecao() {
       }
 
     }/*else{
-
       if(INVERSAO==true){
-
-
      }
-
      INVERSAO=false;*/
 
 
@@ -170,12 +165,10 @@ void faixadepedestre() {
         sensRead[2] < THRESHMARK && sensRead[3] < THRESHMARK && sensRead[4] < THRESHMARK && sensRead[5] < THRESHMARK  //Quando ver tudo ver 
         && sensRead[6] < THRESHMARK && sensRead[7] < THRESHMARK &&
         sensMarkDir < THRESHSIDE && sensMarkEsq < THRESHSIDE) {
-      ATRAVESSANDOFAIXA = true;
+          ATRAVESSANDOFAIXA = true;
+          Serial.println("\n********************************************************************************* LEU TUDO PRETO\n");
     }
-
-
   }
-
 }
 
 
@@ -393,27 +386,32 @@ void contamarcaDir() {
       sensMarkEsq = analogRead(SMARKESQ);
     }
     if (ATRAVESSANDOFAIXA == true) {
-      if (sensRead[3] > THRESHMARK || sensRead[4] > THRESHMARK ) { //Se  os 2 sensores do meio verem algo branco, ira faze o calculo usando a leitura dos 4 sensores centrais
-        lastsensRead[2] = sensRead[2];
-        lastsensRead[3] = sensRead[3];
-        lastsensRead[4] = sensRead[4];
-        lastsensRead[5] = sensRead[5];
-        //  Serial.print ("\nEstou lendo a faixa de pedestre\n");
+      int t = millis();
+      while(1){//ANDA RETO POR 0.9 SEG
+         if(millis() - t >= 1100) break;
+         
+         motorDir.setSpeed(80);
+         motorEsq.setSpeed(65); 
+         motorDir.run(FORWARD);
+         motorEsq.run(FORWARD);
       }
+      t = millis();
+      /*
+      while(1){//TESTE DE PARADA
+         if(millis() -t >= 20000) break;
+         
+         motorDir.setSpeed(0);
+         motorEsq.setSpeed(0); 
+         motorDir.run(FORWARD);
+         motorEsq.run(FORWARD);
+      }
+      */
+      
+      ATRAVESSANDOFAIXA = false;
+      FAIXAAVIR = false;
+      EMFAIXA = false;
+      INVERSAO=false;
     }
-    if (ATRAVESSANDOFAIXA == true) {
-      sensRead[0] = lastsensRead[0];
-      sensRead[1] = lastsensRead[1];
-      sensRead[2] = lastsensRead[2];
-      sensRead[3] = lastsensRead[3];
-      sensRead[4] = lastsensRead[4];
-      sensRead[5] = lastsensRead[5];
-      sensRead[6] = lastsensRead[6];
-      sensRead[7] = lastsensRead[7];
-   
-
-    }
-
 
     if (debugSen) {
       Serial.print(" "); Serial.print(sensRead[0]);
@@ -592,13 +590,15 @@ void contamarcaDir() {
   void loop() {
 
    
+    /*    
     contamarcaDir();
     if (EMROTATORIA == true)
       rotatoria();
+    */
     if (FAIXAAVIR == false&&emcurva==false)
       centroid(); 
-    //detectainvecao();
-    //faixadepedestre();
+    detectainvecao();
+    faixadepedestre();
     control();
     if (emcurva == false && FAIXAAVIR == false  ) {
       motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));

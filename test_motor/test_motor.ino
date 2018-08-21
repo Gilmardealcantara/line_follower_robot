@@ -18,8 +18,8 @@ void setup() {
 }
 
 void loop() {
- motorDir.setSpeed(50);
- motorEsq.setSpeed(50); 
+ motorDir.setSpeed(80);
+ motorEsq.setSpeed(70); 
  motorDir.run(FORWARD);
  motorEsq.run(FORWARD);
   
