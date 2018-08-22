@@ -18,7 +18,7 @@ bool debugRotatoria = false;
 bool debugfaixadepedestre = false;
 //INF
 #define INF 0xffffffff
-double THRESHSIDE = 250;
+double THRESHSIDE = 80;
 double THRESHMARK = 500;
 
 
@@ -92,13 +92,13 @@ int countLine;
 unsigned long tmarkcurva,tmarks;
 int NumeroMarcas;
 double err, lasterr, lasterr_ante, err_ante = 0;
+double tempoMark = 0;
 
 
 void detectainvecao() {
   if (FAIXAAVIR == false && EMFAIXA == false)
     if ((sensRead[3] < THRESHMARK || sensRead[4] < THRESHMARK) &&
-        sensRead[0] > THRESHMARK && sensRead[1] > THRESHMARK && sensRead[6] > THRESHMARK && sensRead[7] > THRESHMARK &&
-        sensMarkDir > THRESHSIDE && sensMarkEsq > THRESHSIDE) {
+        sensRead[0] > THRESHMARK && sensRead[1] > THRESHMARK && sensRead[6] > THRESHMARK && sensRead[7] > THRESHMARK ) {
       if (INVERSAO == false) {
         INVERSAO = true;
         if (debugInversao == true)
@@ -121,12 +121,8 @@ void detectainvecao() {
       }
 
     }/*else{
-
       if(INVERSAO==true){
-
-
      }
-
      INVERSAO=false;*/
 
 
@@ -151,7 +147,7 @@ void faixadepedestre() {
     }*/
   if (FAIXAAVIR == true) {
 
-    if ((int)(millis() - 2000) > (int)(tstart)) {
+    if ((int)(millis() - 5000) > (int)(tstart)) {
       //Serial.print ("Consegui");
       EMFAIXA = true;
       FAIXAAVIR = false;
@@ -170,19 +166,17 @@ void faixadepedestre() {
         sensRead[2] < THRESHMARK && sensRead[3] < THRESHMARK && sensRead[4] < THRESHMARK && sensRead[5] < THRESHMARK  //Quando ver tudo ver 
         && sensRead[6] < THRESHMARK && sensRead[7] < THRESHMARK &&
         sensMarkDir < THRESHSIDE && sensMarkEsq < THRESHSIDE) {
-      ATRAVESSANDOFAIXA = true;
+          ATRAVESSANDOFAIXA = true;
+          //Serial.println("\n********************************************************************************* LEU TUDO PRETO\n");
     }
-
-
   }
-
 }
 
 
 void curvafechadaDir() {
      tmarkcurva=millis();
            while((int)(millis()-1100)<(int)tmarkcurva){
-                  motorDir.setSpeed(0);
+                  motorDir.setSpeed(10);
                   motorEsq.setSpeed(70);
                   motorEsq.run(FORWARD);
                   motorDir.run(FORWARD);
@@ -194,7 +188,7 @@ void curvafechadaEsq() {
      tmarkcurva=millis();
      while((int)(millis()-1100)<(int)tmarkcurva){
                   motorDir.setSpeed(70);
-                  motorEsq.setSpeed(0);
+                  motorEsq.setSpeed(10);
                   motorEsq.run(FORWARD);
                   motorDir.run(FORWARD);
               
@@ -210,8 +204,8 @@ void contamarca() {
     //Rotina padrao enquanto nao indentificou nenhum marca branca
     if ((tmarks == INF)) {
       
-      if (sensMarkDir >= THRESHSIDE &&  sensRead[1] < THRESHMARK) {  //Se o sensor da direita ver branco e sensor 1 ver preto, conta uma marca a direita
-        tmarks= millis();
+      if (sensMarkDir >= THRESHSIDE &&  sensRead[1] < THRESHMARK  ) {  //Se o sensor da direita ver branco e sensor 1 ver preto, conta uma marca a direita
+        tmarks=millis();
         countDir++;
         if (debugcountMark == true) {
             Serial.print("\nN Marcas Dir:");
@@ -221,7 +215,7 @@ void contamarca() {
       }
       
       if (sensMarkEsq >= THRESHSIDE &&  sensRead[6] < THRESHMARK) {  //Se o sensor da Esquerda ver branco e sensor 1 ver preto, conta uma marca a direita
-        tmarks= millis();
+        tmarks=millis();
         countEsq++;
         if (debugcountMark == true) {
             Serial.print("N Marcas Esq:");
@@ -230,11 +224,16 @@ void contamarca() {
           }
       }
       
-      if ( sensRead[0] > THRESHMARK   &&  sensRead[1] > THRESHMARK && sensRead[2] > THRESHMARK   &&  sensRead[3] > THRESHMARK 
-      && sensRead[4] > THRESHMARK   &&  sensRead[5] > THRESHMARK && sensRead[6] > THRESHMARK   &&  sensRead[7] > THRESHMARK) {  //Se o sensor ler tudo branco
+      boolean condicao = false;
+      condicao = ( (sensRead[0] > THRESHMARK   &&  sensRead[1] > THRESHMARK && sensRead[2] > THRESHMARK   &&  sensRead[3] > THRESHMARK) 
+      || (sensRead[4] > THRESHMARK   &&  sensRead[5] > THRESHMARK && sensRead[6] > THRESHMARK   &&  sensRead[7] > THRESHMARK)) ?true:false;
+      
+      if ( condicao ) {  //Se o sensor ler tudo branco
           tmarkcurva = millis();
           tmarks=millis();
-          countLine=1;
+          if(countDir>0&&countEsq>0)
+            countLine=1;
+          
           if(countDir > 0 || countEsq > 0){
             emcurva=true;
           }
@@ -339,6 +338,7 @@ void contamarca() {
     }
 
   }//function end
+  
   void curvasimples(){
     if(countLine==1){
       if(countDir==1&&countEsq==0){ //Vira para a direita
@@ -357,9 +357,22 @@ void contamarca() {
            if(debugcountMark==true)
               Serial.print ("Curva  Esquerda \n");
       }
-      if(countDir==1&&countEsq==1){ //Vira direita esques
+      
+      if(countDir==1&&countEsq==1){ //Vira direita ou esquesda
+           emcurva=false;
            
+           
+           //curvafechadaEsq(); 
+          
+           curvafechadaDir();
+           countDir=0;
+           countLine=0;
+           countEsq=0;
+           if(debugcountMark==true)         
+             Serial.print("Curva de marcacao dupla");    
       }
+      
+      
     }
   }
 void tomadordedecisao() { //Funçao que gerencia a rotatoria     
@@ -423,27 +436,32 @@ void tomadordedecisao() { //Funçao que gerencia a rotatoria
       sensMarkEsq = analogRead(SMARKESQ);
     }
     if (ATRAVESSANDOFAIXA == true) {
-      if (sensRead[3] > THRESHMARK || sensRead[4] > THRESHMARK ) { //Se  os 2 sensores do meio verem algo branco, ira faze o calculo usando a leitura dos 4 sensores centrais
-        lastsensRead[2] = sensRead[2];
-        lastsensRead[3] = sensRead[3];
-        lastsensRead[4] = sensRead[4];
-        lastsensRead[5] = sensRead[5];
-        //  Serial.print ("\nEstou lendo a faixa de pedestre\n");
+      int t = millis();
+      while(1){//ANDA RETO POR 0.9 SEG
+         if(millis() - t >= 2000) break;
+         
+         motorDir.setSpeed(80);
+         motorEsq.setSpeed(65); 
+         motorDir.run(FORWARD);
+         motorEsq.run(FORWARD);
       }
+      t = millis();
+      /*
+      while(1){//TESTE DE PARADA
+         if(millis() -t >= 20000) break;
+         
+         motorDir.setSpeed(0);
+         motorEsq.setSpeed(0); 
+         motorDir.run(FORWARD);
+         motorEsq.run(FORWARD);
+      }
+      */
+      
+      ATRAVESSANDOFAIXA = false;
+      FAIXAAVIR = false;
+      EMFAIXA = false;
+      INVERSAO=false;
     }
-    if (ATRAVESSANDOFAIXA == true) {
-      sensRead[0] = lastsensRead[0];
-      sensRead[1] = lastsensRead[1];
-      sensRead[2] = lastsensRead[2];
-      sensRead[3] = lastsensRead[3];
-      sensRead[4] = lastsensRead[4];
-      sensRead[5] = lastsensRead[5];
-      sensRead[6] = lastsensRead[6];
-      sensRead[7] = lastsensRead[7];
-   
-
-    }
-
 
     if (debugSen) {
       Serial.print(" "); Serial.print(sensRead[0]);
@@ -608,8 +626,8 @@ void tomadordedecisao() { //Funçao que gerencia a rotatoria
    
       
       
-    //detectainvecao();
-    //faixadepedestre();
+    detectainvecao();
+    faixadepedestre();
     control();
     if (emcurva == false && FAIXAAVIR == false  ) {
       motorEsq.setSpeed(constrain(PWMMIN + abs(M.pwmL), PWMMIN, PWMMAX));
