@@ -12,7 +12,7 @@
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
 bool debugMark = false;
-bool debugcountMark=false;
+bool debugcountMark=true;
 bool debugInversao = false;
 bool debugRotatoria = false;
 bool debugfaixadepedestre = false;
@@ -214,7 +214,7 @@ void contamarca() {
         tmarks= millis();
         countDir++;
         if (debugcountMark == true) {
-            Serial.print("\nN Marcas:");
+            Serial.print("\nN Marcas Dir:");
             Serial.print(countDir);
             Serial.print("\n");
           }
@@ -224,8 +224,8 @@ void contamarca() {
         tmarks= millis();
         countEsq++;
         if (debugcountMark == true) {
-            Serial.print("N Marcas:");
-            Serial.print(countDir);
+            Serial.print("N Marcas Esq:");
+            Serial.print(countEsq);
             Serial.print("\n");
           }
       }
@@ -261,25 +261,26 @@ void contamarca() {
 
   int conDir, conEsq;
   void rotatoria() {
-  Serial.print("Rotatoria\n");
+  
   if(countEsq==0 && countDir>1){ //Rotatoria para o lado direito
     switch (countDir) {
       case 2:
-        //Serial.print("Case 2");
-        if (sensRead[0] > THRESHMARK) {
+        if (sensMarkDir > THRESHMARK) {
+              Serial.print("Case 2");
           curvafechadaDir();
           EMROTATORIA = false;
           countDir=countEsq=0;
         }
+        break;
       case 3:
         // Serial.print("Caseo 3");
-        if (sensRead[0] > THRESHMARK) {
+        if (sensMarkDir > THRESHMARK) {
           conDir++;
-          Serial.print(" novaMarcaDir\n");
+       //   Serial.print(" novaMarcaDir\n");
         }
        
         if (conDir == 2) {
-          Serial.print(" virando\n");
+         // Serial.print(" virando\n");
           curvafechadaDir();
           EMROTATORIA = false;
           countDir=countEsq=0;
@@ -288,7 +289,7 @@ void contamarca() {
         break;
 
       case 4:
-        if (sensRead[0] > THRESHMARK) {
+        if (sensMarkDir > THRESHMARK) {
           conDir++;
         }
         if (conDir == 3) {
@@ -347,8 +348,6 @@ void contamarca() {
            countLine=0;
            if(debugcountMark==true)
               Serial.print ("Curva  Direita\n");
-          
-        
       }
        if(countDir==0&&countEsq==1){ //Vira para a Esquerda
            curvafechadaEsq(); 
@@ -365,33 +364,19 @@ void tomadordedecisao() { //Funçao que gerencia a rotatoria
       if((countEsq>1 || countDir>1) && countLine==1){
         if(emcurva==true){       
           if(countDir>1&&countEsq==0){
-            tmarkcurva=millis();
-           while((int)(millis()-1100)<(int)tmarkcurva){
-                  motorDir.setSpeed(0);
-                  motorEsq.setSpeed(50);
-                  motorEsq.run(FORWARD);
-                  motorDir.run(FORWARD);
-               
-           }
+           curvafechadaDir();
            emcurva=false;
             if(debugcountMark==true)
-              Serial.print ("Primeira curva rotatoria Direita\n");
+              Serial.print ("Primeira curva rotatoria dir\n");
           }else if (countEsq>0&&countDir==0){
-           tmarkcurva=millis();
-           while((int)(millis()-1100)<(int)tmarkcurva){
-                  motorDir.setSpeed(0);
-                  motorEsq.setSpeed(50);
-                  motorEsq.run(FORWARD);
-                  motorDir.run(FORWARD);
-               
-           }
+           curvafechadaEsq();
            emcurva=false;
             if(debugcountMark==true)
               Serial.print ("Primeira curva Rotatoria Esquerda\n");
           }
         }else{
-               //   Serial.print("curva encerrada\n");
           if(countEsq==0 && countDir>1 || countEsq>1 && countDir==0 ){
+             Serial.print ("Em rotatoria\n"); 
              conDir=conEsq=0;
              EMROTATORIA=true;    
           } 
@@ -603,11 +588,12 @@ void tomadordedecisao() { //Funçao que gerencia a rotatoria
 
     if (FAIXAAVIR == false && emcurva==false)
       centroid(); 
-    contamarca();
+    if(EMROTATORIA==false)  
+      contamarca();
     tomadordedecisao(); //Usado para rotatoria
     curvasimples();
    // if (EMROTATORIA == true)
-   //   rotatoria();
+   //    rotatoria();
    
       
       
