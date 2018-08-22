@@ -12,7 +12,7 @@
 bool debugSen = false;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ;
 bool debugMotor = false;
 bool debugMark = false;
-bool debugcountMark=true;
+bool debugcountMark=false;
 bool debugInversao = false;
 bool debugRotatoria = false;
 bool debugfaixadepedestre = false;
@@ -183,7 +183,7 @@ void curvafechadaDir() {
      tmarkcurva=millis();
            while((int)(millis()-1100)<(int)tmarkcurva){
                   motorDir.setSpeed(0);
-                  motorEsq.setSpeed(50);
+                  motorEsq.setSpeed(70);
                   motorEsq.run(FORWARD);
                   motorDir.run(FORWARD);
                
@@ -193,11 +193,11 @@ void curvafechadaDir() {
 void curvafechadaEsq() {
      tmarkcurva=millis();
      while((int)(millis()-1100)<(int)tmarkcurva){
-                  motorDir.setSpeed(5);
+                  motorDir.setSpeed(70);
                   motorEsq.setSpeed(0);
                   motorEsq.run(FORWARD);
                   motorDir.run(FORWARD);
-               
+              
       }
 }
 #define TBMARKS 300 //Tempo indicando que saiu da regiao de marcas 
@@ -357,6 +357,9 @@ void contamarca() {
            if(debugcountMark==true)
               Serial.print ("Curva  Esquerda \n");
       }
+      if(countDir==1&&countEsq==1){ //Vira direita esques
+           
+      }
     }
   }
 void tomadordedecisao() { //Funçao que gerencia a rotatoria     
@@ -456,7 +459,15 @@ void tomadordedecisao() { //Funçao que gerencia a rotatoria
     }
   }
 
-
+ void paradaTotal(){
+    if(sensRead[0] <THRESHMARK && sensRead[1] <THRESHMARK && sensRead[2] <THRESHMARK && sensRead[3] <THRESHMARK && sensRead[4] < THRESHMARK &&  sensRead[5] <THRESHMARK 
+    && sensRead[6] < THRESHMARK && sensRead[7] < THRESHMARK  && FAIXAAVIR == false) {
+      while(1){
+        motorEsq.setSpeed(0);
+        motorDir.setSpeed(0);
+        }
+      }
+    }
 
   //--------------------------------Calculo da centroid
   double WSens[8] = {DS1, DS2, DS3, DS4, DS5, DS6, DS7, DS8};
